@@ -28,20 +28,18 @@ export const authService = {
     const hasBackend = !!import.meta.env.VITE_API_URL;
 
     if (hasBackend) {
-      try {
-        const res = await api.post<AuthResult>('/auth/login', credentials);
-        if (res.data?.token) {
-          localStorage.setItem(TOKEN_KEY, res.data.token);
-          localStorage.setItem(USER_KEY, JSON.stringify(res.data.user));
-          return res.data;
-        }
-      } catch (err) {
-        console.warn('Backend login unavailable or returned error, falling back to mock authentication:', err);
+      // Direct integration with real backend endpoint
+      const res = await api.post<AuthResult>('/auth/login', credentials);
+      if (res.data?.token) {
+        localStorage.setItem(TOKEN_KEY, res.data.token);
+        localStorage.setItem(USER_KEY, JSON.stringify(res.data.user));
+        return res.data;
       }
+      throw new Error(res.message || 'Authentication failed: No token received.');
     }
 
-    // Mock authentication with validation
-    await new Promise((resolve) => setTimeout(resolve, 400)); // realistic network latency
+    // Client mock fallback when no backend is configured
+    await new Promise((resolve) => setTimeout(resolve, 400)); // realistic latency
 
     const trimmedEmail = credentials.email.trim().toLowerCase();
     const matchedUser = mockUsers.find((u) => u.email.toLowerCase() === trimmedEmail) || {
@@ -64,18 +62,17 @@ export const authService = {
     const hasBackend = !!import.meta.env.VITE_API_URL;
 
     if (hasBackend) {
-      try {
-        const res = await api.post<AuthResult>('/auth/register', credentials);
-        if (res.data?.token) {
-          localStorage.setItem(TOKEN_KEY, res.data.token);
-          localStorage.setItem(USER_KEY, JSON.stringify(res.data.user));
-          return res.data;
-        }
-      } catch (err) {
-        console.warn('Backend register unavailable, falling back to mock registration:', err);
+      // Direct integration with real backend registration endpoint
+      const res = await api.post<AuthResult>('/auth/register', credentials);
+      if (res.data?.token) {
+        localStorage.setItem(TOKEN_KEY, res.data.token);
+        localStorage.setItem(USER_KEY, JSON.stringify(res.data.user));
+        return res.data;
       }
+      throw new Error(res.message || 'Registration failed: No token received.');
     }
 
+    // Client mock registration fallback when no backend is configured
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     const newUser: User = {
@@ -105,20 +102,22 @@ export const authService = {
   getCurrentUser(): User | null {
     try {
       const stored = localStorage.getItem(USER_KEY);
-      if (stored) {
+      const token = localStorage.getItem(TOKEN_KEY);
+      if (stored && token) {
         return JSON.parse(stored);
       }
     } catch {
       localStorage.removeItem(USER_KEY);
+      localStorage.removeItem(TOKEN_KEY);
     }
-    return defaultUser; // Seeded logged-in user for seamless evaluation preview
+    return null;
   },
 
   getToken(): string | null {
-    return localStorage.getItem(TOKEN_KEY) || 'mock_dev_token';
+    return localStorage.getItem(TOKEN_KEY) || null;
   },
 
   isAuthenticated(): boolean {
-    return true; // Active preview session default, easily toggled by logout
+    return !!this.getToken() && !!this.getCurrentUser();
   },
 };

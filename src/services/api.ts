@@ -51,6 +51,11 @@ export async function request<T = any>(
     const data = await response.json().catch(() => null);
 
     if (!response.ok) {
+      if (response.status === 401) {
+        // Clear expired or invalid token
+        localStorage.removeItem('smarthome_token');
+        localStorage.removeItem('smarthome_user');
+      }
       throw new ApiError(
         data?.message || `Request failed with status ${response.status}`,
         response.status,

@@ -24,7 +24,11 @@ export const BrowserHeader: React.FC = () => {
   ];
 
   const handleSwitchUser = async (user: typeof mockUsers[0]) => {
-    await login({ email: user.email });
+    try {
+      await login({ email: user.email, password: 'password123' });
+    } catch (err) {
+      console.warn('Could not switch demo user:', err);
+    }
     setUserDropdownOpen(false);
   };
 

@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { BrowserHeader } from '../components/layout/BrowserHeader';
 
 export const Login: React.FC = () => {
-  const { login, loading } = useAuth();
+  const { login, loading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('alex@smarthome.io');
   const [password, setPassword] = useState('password123');
   const [error, setError] = useState('');
+
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,6 +130,15 @@ export const Login: React.FC = () => {
               {loading ? 'Authenticating...' : 'Sign In to Dashboard →'}
             </button>
           </form>
+
+          <div className="text-center pt-3 border-t border-slate-100 mt-5">
+            <p className="text-xs text-slate-500">
+              Don't have an account?{' '}
+              <Link to="/register" className="font-semibold text-[#0284c7] hover:text-[#0369a1] hover:underline">
+                Create Account
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </div>
