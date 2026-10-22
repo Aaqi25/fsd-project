@@ -55,8 +55,18 @@ async function runTests() {
   }
 
   try {
+    // 0. Test URI and error credential masking
+    console.log('0. Testing Credential Masking in Diagnostics:');
+    const { sanitizeMongoUri, sanitizeError } = require('./src/config/db');
+    const maskedUri = sanitizeMongoUri('mongodb+srv://admin_user:super_secret_pw@cluster0.mongodb.net/test');
+    assert(!maskedUri.includes('super_secret_pw'), 'Password is NOT exposed in sanitized URI');
+    assert(maskedUri.includes('*****@'), 'Password is appropriately masked with *****@ in URI');
+
+    const maskedErr = sanitizeError(new Error('Connection to mongodb://dbuser:mypassword99@10.0.0.1:27017/test failed'));
+    assert(!maskedErr.includes('mypassword99'), 'Password is NOT exposed in sanitized error string');
+
     // 1. Health check
-    console.log('1. Testing Health Endpoint:');
+    console.log('\n1. Testing Health Endpoint:');
     const health = await request('/api/health');
     assert(health.status === 200, `Health endpoint returned status 200 (got ${health.status})`);
     assert(health.data.status === 'ok', `Health status is "ok" (got ${health.data.status})`);
