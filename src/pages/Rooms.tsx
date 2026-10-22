@@ -1,145 +1,139 @@
-import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { useHome } from '../context/HomeContext';
-import { PageHeader } from '../components/common/PageHeader';
-import { Button } from '../components/common/Button';
-import { RoomCard } from '../components/rooms/RoomCard';
-import { RoomDetailPanel } from '../components/rooms/RoomDetailPanel';
-import { AddRoomModal } from '../components/rooms/AddRoomModal';
-import { DeviceDetailsModal } from '../components/devices/DeviceDetailsModal';
-import { EmptyState } from '../components/common/EmptyState';
-import { Device } from '../types';
-import { Plus, Home as HomeIcon } from 'lucide-react';
+import React, { useState } from 'react';
+
+interface RoomLayoutCard {
+  id: string;
+  name: string;
+  floor: number;
+  appliancesCount: number;
+  temp: number;
+  humidity: number;
+  powerWatts: number;
+  stripeColor: string;
+  isAllOff: boolean;
+}
 
 export const Rooms: React.FC = () => {
-  const {
-    rooms,
-    devices,
-    alerts,
-    toggleDevice,
-    togglePending,
-    updateDeviceAttributes,
-    deleteDevice,
-    addRoom,
-    deleteRoom,
-  } = useHome();
+  const [rooms, setRooms] = useState<RoomLayoutCard[]>([
+    {
+      id: 'room_1',
+      name: 'Living Room',
+      floor: 1,
+      appliancesCount: 4,
+      temp: 22.5,
+      humidity: 48,
+      powerWatts: 620,
+      stripeColor: '#3b82f6', // blue
+      isAllOff: false,
+    },
+    {
+      id: 'room_2',
+      name: 'Master Bedroom',
+      floor: 2,
+      appliancesCount: 3,
+      temp: 24.0,
+      humidity: 45,
+      powerWatts: 980,
+      stripeColor: '#a855f7', // purple
+      isAllOff: false,
+    },
+    {
+      id: 'room_3',
+      name: 'Kitchen & Pantry',
+      floor: 1,
+      appliancesCount: 5,
+      temp: 25.0,
+      humidity: 52,
+      powerWatts: 240,
+      stripeColor: '#f59e0b', // amber
+      isAllOff: false,
+    },
+    {
+      id: 'room_4',
+      name: 'Study & Home Lab',
+      floor: 2,
+      appliancesCount: 4,
+      temp: 23.0,
+      humidity: 46,
+      powerWatts: 110,
+      stripeColor: '#10b981', // green
+      isAllOff: false,
+    },
+  ]);
 
-  const [searchParams, setSearchParams] = useSearchParams();
-  const selectedParam = searchParams.get('selected');
-
-  const [selectedRoomId, setSelectedRoomId] = useState<string>(
-    selectedParam || rooms[0]?._id || ''
-  );
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [inspectedDevice, setInspectedDevice] = useState<Device | null>(null);
-
-  useEffect(() => {
-    if (selectedParam) {
-      setSelectedRoomId(selectedParam);
-    } else if (!selectedRoomId && rooms.length > 0) {
-      setSelectedRoomId(rooms[0]._id);
-    }
-  }, [selectedParam, rooms]);
-
-  const handleSelectRoom = (id: string) => {
-    setSelectedRoomId(id);
-    setSearchParams({ selected: id });
+  const handleToggleAllOff = (id: string) => {
+    setRooms((prev) =>
+      prev.map((r) =>
+        r.id === id ? { ...r, isAllOff: !r.isAllOff } : r
+      )
+    );
   };
-
-  const currentRoom = rooms.find((r) => r._id === selectedRoomId) || rooms[0];
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Residential Zones & Rooms"
-        description="Organize appliances by architectural zone, enforce climate setpoints, and monitor localized energy usage"
-        actions={
-          <Button
-            size="sm"
-            leftIcon={<Plus className="w-3.5 h-3.5" />}
-            onClick={() => setIsAddModalOpen(true)}
-          >
-            Add New Room
-          </Button>
-        }
-      />
+      {/* Header */}
+      <div>
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+          Spatial Zones & Architectural Floor Layouts
+        </h1>
+        <p className="text-xs sm:text-sm text-slate-500 mt-1">
+          Aggregate power metering and climate status grouped by residential zones
+        </p>
+      </div>
 
-      {rooms.length === 0 ? (
-        <EmptyState
-          title="No Residential Zones"
-          description="Create your first room to begin assigning appliances and configuring localized climate."
-          icon={HomeIcon}
-          actionLabel="Create Room"
-          onAction={() => setIsAddModalOpen(true)}
-        />
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column: Room Cards Grid (5 cols) */}
-          <div className="lg:col-span-5 space-y-3">
-            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-              Zone Directory ({rooms.length})
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
-              {rooms.map((room) => (
-                <RoomCard
-                  key={room._id}
-                  room={room}
-                  devices={devices}
-                  isSelected={room._id === currentRoom?._id}
-                  onSelect={handleSelectRoom}
-                />
-              ))}
-            </div>
-          </div>
+      {/* 2x2 Grid matching Figure 5.4 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {rooms.map((room) => {
+          const displayedWatts = room.isAllOff ? 0 : room.powerWatts;
 
-          {/* Right Column: Selected Room Operations & Appliance Controls (7 cols) */}
-          <div className="lg:col-span-7">
-            {currentRoom ? (
-              <RoomDetailPanel
-                room={currentRoom}
-                devices={devices}
-                alerts={alerts}
-                togglePending={togglePending}
-                onToggleDevice={toggleDevice}
-                onInspectDevice={setInspectedDevice}
-                onDeleteRoom={async (id) => {
-                  await deleteRoom(id);
-                  if (selectedRoomId === id) {
-                    const remaining = rooms.filter((r) => r._id !== id);
-                    if (remaining.length > 0) {
-                      setSelectedRoomId(remaining[0]._id);
-                    }
-                  }
-                }}
+          return (
+            <div
+              key={room.id}
+              className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between"
+            >
+              {/* Top Colored Stripe Bar */}
+              <div
+                className="h-2 w-full"
+                style={{ backgroundColor: room.stripeColor }}
               />
-            ) : (
-              <div className="bg-white rounded-lg border border-slate-200 p-8 text-center text-xs text-slate-500">
-                Select a room on the left to inspect its active appliances and controls.
+
+              {/* Card Body */}
+              <div className="p-6 flex-1 flex flex-col justify-between">
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                    {room.name}
+                  </h3>
+                  <div className="text-xs text-slate-400 mt-0.5">
+                    Floor {room.floor} • {room.appliancesCount} Appliances
+                  </div>
+
+                  <div className="text-xs text-slate-600 mt-4">
+                    Climate: {room.temp.toFixed(1)} °C • {room.humidity}% RH
+                  </div>
+
+                  <div className="text-sm font-bold text-[#0284c7] mt-1.5">
+                    Power Draw: {displayedWatts} W Total Load
+                  </div>
+                </div>
+
+                {/* Bottom Right: All Off Button */}
+                <div className="flex justify-end mt-6">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleAllOff(room.id)}
+                    className={`px-6 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer shadow-xs ${
+                      room.isAllOff
+                        ? 'bg-amber-50 text-amber-700 border-amber-300'
+                        : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    {room.isAllOff ? 'Turn On' : 'All Off'}
+                  </button>
+                </div>
               </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Add Room Modal */}
-      <AddRoomModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onAddRoom={async (data) => {
-          const created = await addRoom(data);
-          setSelectedRoomId(created._id);
-        }}
-      />
-
-      {/* Device Inspector Modal */}
-      <DeviceDetailsModal
-        device={inspectedDevice}
-        room={rooms.find((r) => r._id === inspectedDevice?.roomId)}
-        isOpen={!!inspectedDevice}
-        onClose={() => setInspectedDevice(null)}
-        onSaveAttributes={updateDeviceAttributes}
-        onDeleteDevice={deleteDevice}
-      />
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };

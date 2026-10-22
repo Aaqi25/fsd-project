@@ -11,7 +11,6 @@ export const SimulatorDrawer: React.FC = () => {
     devices,
     toggleDevice,
     setDeviceOnlineStatus,
-    simulateDeviceToggleFail,
   } = useHome();
 
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>(devices[0]?._id || '');
@@ -196,27 +195,9 @@ export const SimulatorDrawer: React.FC = () => {
           </div>
         </div>
 
-        {/* 3. Failure Injection for Error Handling & UI Rollback (Section 11 & 34) */}
+        {/* 3. Generate Telemetry Alerts */}
         <div className="space-y-2 pt-2 border-t border-slate-100">
-          <p className="text-xs font-semibold text-slate-700">3. Test UI Rollback on Network Failure</p>
-          <p className="text-[11px] text-slate-500">
-            Arm a simulated network timeout. The very next switch toggle in the UI will fail,
-            reverting the toggle switch state back to its original value.
-          </p>
-          <Button
-            size="sm"
-            variant="danger"
-            className="w-full"
-            leftIcon={<AlertTriangle className="w-3.5 h-3.5" />}
-            onClick={simulateDeviceToggleFail}
-          >
-            Arm Failure on Next Toggle
-          </Button>
-        </div>
-
-        {/* 4. Generate Telemetry Alerts */}
-        <div className="space-y-2 pt-2 border-t border-slate-100">
-          <p className="text-xs font-semibold text-slate-700">4. Inject Telemetry Alert</p>
+          <p className="text-xs font-semibold text-slate-700">3. Inject Telemetry Alert</p>
           <div className="space-y-2">
             <Button
               size="sm"

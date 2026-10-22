@@ -1,172 +1,221 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { useHome } from '../context/HomeContext';
-import { PageHeader } from '../components/common/PageHeader';
-import { Button } from '../components/common/Button';
-import { DeviceFilters } from '../components/devices/DeviceFilters';
-import { DeviceCard } from '../components/devices/DeviceCard';
-import { DeviceDetailsModal } from '../components/devices/DeviceDetailsModal';
-import { AddDeviceModal } from '../components/devices/AddDeviceModal';
-import { EmptyState } from '../components/common/EmptyState';
+import { mockDevices } from '../data/devices';
 import { Device } from '../types';
-import { Plus, Cpu } from 'lucide-react';
 
 export const Devices: React.FC = () => {
-  const {
-    devices,
-    rooms,
-    toggleDevice,
-    togglePending,
-    updateDeviceAttributes,
-    deleteDevice,
-    addDevice,
-  } = useHome();
+  const { devices } = useHome();
 
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedRoom, setSelectedRoom] = useState('all');
-  const [selectedType, setSelectedType] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-
-  const [isAddModalOpen, setIsAddModalOpen] = useState(searchParams.get('action') === 'add');
-  const [inspectedDevice, setInspectedDevice] = useState<Device | null>(null);
+  // Initialize with mockDevices so it renders instantly, sync if context updates
+  const [deviceList, setDeviceList] = useState<Device[]>(mockDevices);
+  const [activeTab, setActiveTab] = useState<'all' | 'lights' | 'climate' | 'plugs'>('all');
 
   useEffect(() => {
-    if (searchParams.get('action') === 'add') {
-      setIsAddModalOpen(true);
+    if (devices && devices.length > 0) {
+      setDeviceList(devices);
     }
-  }, [searchParams]);
+  }, [devices]);
 
-  const handleResetFilters = () => {
-    setSearchQuery('');
-    setSelectedRoom('all');
-    setSelectedType('all');
-    setSelectedStatus('all');
+  const [setpoints, setSetpoints] = useState<Record<string, number>>({
+    dev_001: 75,
+    dev_002: 75,
+    dev_003: 75,
+  });
+
+  const handleToggleDevice = (id: string) => {
+    setDeviceList((prev) =>
+      prev.map((dev) => {
+        if (dev._id === id) {
+          const nextStatus = dev.status === 'active' ? 'inactive' : 'active';
+          return {
+            ...dev,
+            status: nextStatus,
+          };
+        }
+        return dev;
+      })
+    );
   };
 
-  // Filter pipeline
-  const filteredDevices = devices.filter((dev) => {
-    // Search matching
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      const matchName = dev.name.toLowerCase().includes(q);
-      const matchIp = dev.ipAddress.toLowerCase().includes(q);
-      const matchModel = dev.model.toLowerCase().includes(q);
-      if (!matchName && !matchIp && !matchModel) return false;
-    }
+  const handleSetpointChange = (id: string, val: number) => {
+    setSetpoints((prev) => ({ ...prev, [id]: val }));
+  };
 
-    // Room matching
-    if (selectedRoom !== 'all' && dev.roomId !== selectedRoom) {
-      return false;
-    }
-
-    // Type matching
-    if (selectedType !== 'all' && dev.type !== selectedType) {
-      return false;
-    }
-
-    // Status matching
-    if (selectedStatus === 'active' && (dev.status !== 'active' || !dev.isOnline)) return false;
-    if (selectedStatus === 'inactive' && dev.status !== 'inactive') return false;
-    if (selectedStatus === 'online' && !dev.isOnline) return false;
-    if (selectedStatus === 'offline' && dev.isOnline) return false;
-
+  // Filter based on active tab
+  const filteredDevices = deviceList.filter((dev) => {
+    if (activeTab === 'lights') return dev.type === 'light';
+    if (activeTab === 'climate') return dev.type === 'ac' || dev.type === 'fan' || dev.type === 'heater';
+    if (activeTab === 'plugs') return dev.type === 'smart_plug';
     return true;
   });
 
+  const lightCount = deviceList.filter((d) => d.type === 'light').length;
+  const climateCount = deviceList.filter((d) => d.type === 'ac' || d.type === 'fan' || d.type === 'heater').length;
+  const plugCount = deviceList.filter((d) => d.type === 'smart_plug').length;
+
+
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Appliance Inventory & Controls"
-        description="Comprehensive directory of registered smart appliances, communication status, wattage demand, and state switches"
-        actions={
-          <Button
-            size="sm"
-            leftIcon={<Plus className="w-3.5 h-3.5" />}
-            onClick={() => setIsAddModalOpen(true)}
+      {/* Header and Filter Tabs */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+            Appliance Inventory & Telemetry Controls
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+            Search, filter, and actuate connected residential hardware
+          </p>
+        </div>
+
+        {/* Filter Pills matching Figure 5.3 */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setActiveTab('all')}
+            className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+              activeTab === 'all'
+                ? 'bg-[#0284c7] text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-200/70 bg-transparent'
+            }`}
           >
-            Add New Device
-          </Button>
-        }
-      />
+            All ({deviceList.length})
+          </button>
 
-      {/* Filter Toolbar */}
-      <DeviceFilters
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        selectedRoom={selectedRoom}
-        onRoomChange={setSelectedRoom}
-        selectedType={selectedType}
-        onTypeChange={setSelectedType}
-        selectedStatus={selectedStatus}
-        onStatusChange={setSelectedStatus}
-        rooms={rooms}
-        onReset={handleResetFilters}
-      />
+          <button
+            type="button"
+            onClick={() => setActiveTab('lights')}
+            className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+              activeTab === 'lights'
+                ? 'bg-[#0284c7] text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-200/70 bg-transparent'
+            }`}
+          >
+            Lights ({lightCount})
+          </button>
 
-      {/* Results Count Summary */}
-      <div className="flex items-center justify-between text-xs text-slate-500 font-mono px-1">
-        <span>
-          Showing {filteredDevices.length} of {devices.length} registered hardware nodes
-        </span>
-        <span>
-          Active power: <strong className="text-slate-800">
-            {filteredDevices
-              .filter((d) => d.status === 'active' && d.isOnline)
-              .reduce((s, d) => s + d.powerWatts, 0)}{' '}
-            W
-          </strong>
-        </span>
+          <button
+            type="button"
+            onClick={() => setActiveTab('climate')}
+            className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+              activeTab === 'climate'
+                ? 'bg-[#0284c7] text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-200/70 bg-transparent'
+            }`}
+          >
+            Climate ({climateCount})
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('plugs')}
+            className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+              activeTab === 'plugs'
+                ? 'bg-[#0284c7] text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-200/70 bg-transparent'
+            }`}
+          >
+            Plugs ({plugCount})
+          </button>
+        </div>
       </div>
 
-      {/* Devices Grid */}
-      {filteredDevices.length === 0 ? (
-        <EmptyState
-          title="No Appliances Found"
-          description="No devices match the specified filter criteria. Try adjusting search terms or resetting filters."
-          icon={Cpu}
-          actionLabel="Clear Filters"
-          onAction={handleResetFilters}
-        />
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredDevices.map((device) => {
-            const room = rooms.find((r) => r._id === device.roomId);
-            return (
-              <DeviceCard
-                key={device._id}
-                device={device}
-                room={room}
-                isPending={!!togglePending[device._id]}
-                onToggle={toggleDevice}
-                onInspect={setInspectedDevice}
-                onDelete={deleteDevice}
-              />
-            );
-          })}
-        </div>
-      )}
+      {/* 3-Column Grid of Appliance Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredDevices.map((device) => {
+          const isActived = device.status === 'active';
+          const currentSetpoint = setpoints[device._id] ?? (device.attributes.brightness || 75);
 
-      {/* Add Device Modal */}
-      <AddDeviceModal
-        isOpen={isAddModalOpen}
-        onClose={() => {
-          setIsAddModalOpen(false);
-          setSearchParams({});
-        }}
-        rooms={rooms}
-        onAdd={addDevice}
-      />
+          // Subtitle formatting
+          let roomName = 'Living Room';
+          if (device.roomId === 'room_bedroom') roomName = 'Master Bedroom';
+          if (device.roomId === 'room_kitchen') roomName = 'Kitchen';
+          if (device.roomId === 'room_office') roomName = 'Study & Office';
 
-      {/* Device Inspector Modal */}
-      <DeviceDetailsModal
-        device={inspectedDevice}
-        room={rooms.find((r) => r._id === inspectedDevice?.roomId)}
-        isOpen={!!inspectedDevice}
-        onClose={() => setInspectedDevice(null)}
-        onSaveAttributes={updateDeviceAttributes}
-        onDeleteDevice={deleteDevice}
-      />
+          let liveLoadText = `Live Load: ${device.powerWatts} W`;
+          if (device._id === 'dev_003') {
+            liveLoadText = 'Live Load: 45 W (Coffee Maker Standby)';
+          } else if (!isActived) {
+            liveLoadText = 'Live Load: 0 W (Standby)';
+          }
+
+          return (
+            <div
+              key={device._id}
+              className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-all"
+            >
+              <div>
+                {/* Title & Status Badge */}
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="text-base font-bold text-slate-900 tracking-tight">
+                    {device.name}
+                  </h3>
+                  <span
+                    className={`px-3 py-0.5 rounded-full text-xs font-medium border ${
+                      device._id === 'dev_003' || !isActived
+                        ? 'bg-amber-50 text-amber-700 border-amber-200'
+                        : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    }`}
+                  >
+                    {device._id === 'dev_003' || !isActived ? 'Standby' : 'Active'}
+                  </span>
+                </div>
+
+                {/* Subtitle */}
+                <div className="text-xs text-slate-500 mt-1">
+                  {roomName} • {device.model}
+                </div>
+
+                {/* Live Load */}
+                <div className="text-sm font-bold text-sky-700 mt-5">
+                  {liveLoadText}
+                </div>
+
+                {/* IP & Firmware */}
+                <div className="text-xs text-slate-500 mt-2 space-y-0.5 font-sans">
+                  <div>IP: {device.ipAddress}</div>
+                  <div>Firmware: {device.firmware}</div>
+                </div>
+
+                {/* Actuation Setpoint Controls */}
+                <div className="mt-5">
+                  <div className="text-xs font-bold text-slate-800 mb-2">
+                    Actuation Setpoint Controls:
+                  </div>
+
+                  <div className="relative flex items-center">
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={currentSetpoint}
+                      onChange={(e) =>
+                        handleSetpointChange(device._id, parseInt(e.target.value))
+                      }
+                      className="w-full h-3 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#0284c7]"
+                    />
+                    <span className="ml-3 text-xs font-bold text-sky-700 min-w-[36px]">
+                      {currentSetpoint}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Toggle State Button */}
+              <button
+                type="button"
+                onClick={() => handleToggleDevice(device._id)}
+                className={`w-full mt-6 py-2.5 px-4 rounded-lg text-xs font-bold text-white transition-colors cursor-pointer shadow-xs ${
+                  isActived
+                    ? 'bg-[#0f172a] hover:bg-slate-800'
+                    : 'bg-slate-700 hover:bg-slate-800'
+                }`}
+              >
+                Toggle State ({isActived ? 'ON' : 'OFF'})
+              </button>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };

@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Lock, Mail, ArrowRight, ShieldCheck } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Button } from '../components/common/Button';
-import { Input } from '../components/common/Input';
+import { BrowserHeader } from '../components/layout/BrowserHeader';
 
 export const Login: React.FC = () => {
   const { login, loading } = useAuth();
@@ -24,93 +22,110 @@ export const Login: React.FC = () => {
     }
   };
 
-  const handleFillDemo = () => {
-    setEmail('alex@smarthome.io');
+  const handleQuickDemo = async (demoEmail: string) => {
+    setEmail(demoEmail);
     setPassword('password123');
     setError('');
+    try {
+      await login({ email: demoEmail, password: 'password123' });
+      navigate('/dashboard');
+    } catch (err: any) {
+      setError(err.message || 'Login failed');
+    }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 className="text-center text-xl font-bold tracking-tight text-slate-900">
-          SmartHome Operations Platform
-        </h2>
-        <p className="mt-1 text-center text-xs text-slate-500">
-          Centralized appliance control, automation, security & energy monitoring
-        </p>
-      </div>
+    <div className="min-h-screen flex flex-col bg-[#f8fafc]">
+      {/* Top Browser Bar & Dark Navigation Bar */}
+      <BrowserHeader />
 
-      <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md px-4">
-        <div className="bg-white py-6 px-6 sm:px-8 rounded-lg border border-slate-200 shadow-sm space-y-5">
+      {/* Main Container */}
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-6">
+        <div className="w-full max-w-md bg-white rounded-2xl border border-slate-300/80 shadow-xs p-6 sm:p-8">
+          {/* Header */}
+          <div className="text-center mb-6">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              SmartHome Platform
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1.5">
+              Sign in to access unified home telemetry
+            </p>
+          </div>
+
+          {/* Quick Demo Auto-Fill Box */}
+          <div className="bg-[#eff6ff] border border-[#bfdbfe] rounded-lg p-3.5 mb-6 text-center">
+            <div className="text-xs sm:text-sm font-bold text-[#1d4ed8] mb-2">
+              Quick Demo Auto-Fill (1-Click Login)
+            </div>
+            <div className="flex items-center justify-center gap-3 sm:gap-4 flex-wrap text-xs text-[#2563eb] font-medium">
+              <button
+                type="button"
+                onClick={() => handleQuickDemo('alex@smarthome.io')}
+                className="hover:underline hover:text-blue-800 cursor-pointer transition-colors"
+              >
+                • Alex (Owner)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickDemo('sarah.j@smarthome.io')}
+                className="hover:underline hover:text-blue-800 cursor-pointer transition-colors"
+              >
+                • Sarah (Resident)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickDemo('guest@smarthome.io')}
+                className="hover:underline hover:text-blue-800 cursor-pointer transition-colors"
+              >
+                • Guest
+              </button>
+            </div>
+          </div>
+
           {error && (
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded text-xs text-rose-700 font-medium">
+            <div className="mb-4 p-2.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-md">
               {error}
             </div>
           )}
 
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            <Input
-              label="Email Address"
-              type="email"
-              required
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="alex@smarthome.io"
-              leftIcon={<Mail className="w-4 h-4 text-slate-400" />}
-            />
-
-            <Input
-              label="Password"
-              type="password"
-              required
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              leftIcon={<Lock className="w-4 h-4 text-slate-400" />}
-            />
-
-            <Button
-              type="submit"
-              className="w-full"
-              size="md"
-              isLoading={loading}
-              rightIcon={<ArrowRight className="w-4 h-4" />}
-            >
-              Sign In to System
-            </Button>
-          </form>
-
-          {/* Demo Helper Box for evaluation convenience */}
-          <div className="p-3 bg-slate-50 rounded border border-slate-200 text-xs space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="font-semibold text-slate-700 flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-                Default Demo Credentials:
-              </span>
-              <button
-                type="button"
-                onClick={handleFillDemo}
-                className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
-              >
-                Auto-fill
-              </button>
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-800 mb-1.5">
+                Email Address
+              </label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="alex@smarthome.io"
+                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-white text-slate-800 transition-all"
+              />
             </div>
-            <p className="text-slate-500 font-mono text-[11px]">
-              Email: alex@smarthome.io / Pass: password123
-            </p>
-          </div>
 
-          <div className="text-center pt-2 border-t border-slate-100">
-            <p className="text-xs text-slate-500">
-              Need a new residence profile?{' '}
-              <Link to="/register" className="font-semibold text-blue-600 hover:text-blue-700">
-                Register Homeowner
-              </Link>
-            </p>
-          </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-800 mb-1.5">
+                Password
+              </label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••••"
+                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-white text-slate-800 transition-all font-mono"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full mt-2 bg-[#0284c7] hover:bg-[#0369a1] text-white font-semibold py-3 px-4 rounded-lg text-sm transition-colors shadow-xs cursor-pointer flex items-center justify-center gap-2"
+            >
+              {loading ? 'Authenticating...' : 'Sign In to Dashboard →'}
+            </button>
+          </form>
         </div>
       </div>
     </div>

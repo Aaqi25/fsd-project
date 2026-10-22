@@ -2,7 +2,7 @@ import { Room, RoomType } from '../types';
 import { mockRooms } from '../data/rooms';
 import { api } from './api';
 
-const STORAGE_KEY = 'smarthome_rooms_state';
+const STORAGE_KEY = 'smarthome_rooms_state_v2';
 
 function loadLocalRooms(): Room[] {
   try {

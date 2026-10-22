@@ -51,7 +51,6 @@ interface HomeContextType {
   deleteSchedule: (scheduleId: string) => Promise<void>;
 
   refreshData: () => Promise<void>;
-  simulateDeviceToggleFail: () => void;
 }
 
 const HomeContext = createContext<HomeContextType | undefined>(undefined);
@@ -70,6 +69,15 @@ export const HomeProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [simulatorOpen, setSimulatorOpen] = useState<boolean>(false);
 
   const clearFeedback = () => setFeedbackMessage(null);
+
+  useEffect(() => {
+    if (feedbackMessage) {
+      const timer = setTimeout(() => {
+        setFeedbackMessage(null);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [feedbackMessage]);
 
   const loadAll = useCallback(async () => {
     try {
@@ -343,14 +351,6 @@ export const HomeProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setFeedbackMessage({ text: 'Schedule deleted', type: 'info' });
   };
 
-  const simulateDeviceToggleFail = () => {
-    deviceService.setSimulateFailureOnce(true);
-    setFeedbackMessage({
-      text: 'Failure injection armed: the next device toggle will trigger a network timeout to verify error rollback.',
-      type: 'info',
-    });
-  };
-
   return (
     <HomeContext.Provider
       value={{
@@ -380,7 +380,6 @@ export const HomeProvider: React.FC<{ children: React.ReactNode }> = ({ children
         createSchedule,
         deleteSchedule,
         refreshData: loadAll,
-        simulateDeviceToggleFail,
       }}
     >
       {children}

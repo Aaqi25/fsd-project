@@ -2,7 +2,7 @@ import { Device, DeviceStatus, DeviceAttributes } from '../types';
 import { mockDevices } from '../data/devices';
 import { api } from './api';
 
-const STORAGE_KEY = 'smarthome_devices_state';
+const STORAGE_KEY = 'smarthome_devices_state_v3';
 
 // In-memory / persistent mock repository for interactive demonstration
 function loadLocalDevices(): Device[] {
@@ -25,15 +25,7 @@ function saveLocalDevices(devices: Device[]): void {
   }
 }
 
-// Configurable failure injection for testing UI rollback as explicitly requested in Section 11 & 34:
-// "When user toggles a device: 1. update UI state, 2. show loading/processing state, 3. call service layer, 4. handle success, 5. handle failure, 6. revert UI if request fails"
-let simulateFailureOnce = false;
-
 export const deviceService = {
-  setSimulateFailureOnce(value: boolean) {
-    simulateFailureOnce = value;
-  },
-
   async getAll(): Promise<Device[]> {
     const hasBackend = !!import.meta.env.VITE_API_URL;
     if (hasBackend) {
@@ -55,11 +47,6 @@ export const deviceService = {
   async toggleStatus(deviceId: string, targetStatus: DeviceStatus): Promise<Device> {
     // Artificial latency for realistic async feedback & loading indicator
     await new Promise((resolve) => setTimeout(resolve, 350));
-
-    if (simulateFailureOnce) {
-      simulateFailureOnce = false;
-      throw new Error(`Device communication timeout: failed to toggle ${deviceId}`);
-    }
 
     const hasBackend = !!import.meta.env.VITE_API_URL;
     if (hasBackend) {
