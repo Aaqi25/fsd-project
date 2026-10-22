@@ -48,17 +48,17 @@ app.use(express.urlencoded({ extended: true }));
 // Middleware: CORS Configuration
 const allowedOrigins = [
   'https://fsd-project-bice.vercel.app',
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'http://127.0.0.1:3000',
-  'http://127.0.0.1:3001',
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
+      ) {
         return callback(null, true);
       }
       return callback(new Error(`CORS blocked for origin: ${origin}`));

@@ -4,17 +4,9 @@ import { mockDevices } from '../data/devices';
 import { Device } from '../types';
 
 export const Devices: React.FC = () => {
-  const { devices } = useHome();
+  const { devices, toggleDevice, togglePending, updateDeviceAttributes } = useHome();
 
-  // Initialize with mockDevices so it renders instantly, sync if context updates
-  const [deviceList, setDeviceList] = useState<Device[]>(mockDevices);
   const [activeTab, setActiveTab] = useState<'all' | 'lights' | 'climate' | 'plugs'>('all');
-
-  useEffect(() => {
-    if (devices && devices.length > 0) {
-      setDeviceList(devices);
-    }
-  }, [devices]);
 
   const [setpoints, setSetpoints] = useState<Record<string, number>>({
     dev_001: 75,
@@ -22,24 +14,16 @@ export const Devices: React.FC = () => {
     dev_003: 75,
   });
 
-  const handleToggleDevice = (id: string) => {
-    setDeviceList((prev) =>
-      prev.map((dev) => {
-        if (dev._id === id) {
-          const nextStatus = dev.status === 'active' ? 'inactive' : 'active';
-          return {
-            ...dev,
-            status: nextStatus,
-          };
-        }
-        return dev;
-      })
-    );
+  const handleToggleDevice = async (id: string) => {
+    await toggleDevice(id);
   };
 
   const handleSetpointChange = (id: string, val: number) => {
     setSetpoints((prev) => ({ ...prev, [id]: val }));
+    updateDeviceAttributes(id, { brightness: val });
   };
+
+  const deviceList = devices && devices.length > 0 ? devices : mockDevices;
 
   // Filter based on active tab
   const filteredDevices = deviceList.filter((dev) => {
@@ -203,14 +187,17 @@ export const Devices: React.FC = () => {
               {/* Bottom Toggle State Button */}
               <button
                 type="button"
+                disabled={togglePending[device._id]}
                 onClick={() => handleToggleDevice(device._id)}
-                className={`w-full mt-6 py-2.5 px-4 rounded-lg text-xs font-bold text-white transition-colors cursor-pointer shadow-xs ${
+                className={`w-full mt-6 py-2.5 px-4 rounded-lg text-xs font-bold text-white transition-colors cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed ${
                   isActived
                     ? 'bg-[#0f172a] hover:bg-slate-800'
                     : 'bg-slate-700 hover:bg-slate-800'
                 }`}
               >
-                Toggle State ({isActived ? 'ON' : 'OFF'})
+                {togglePending[device._id]
+                  ? 'Updating...'
+                  : `Toggle State (${isActived ? 'ON' : 'OFF'})`}
               </button>
             </div>
           );

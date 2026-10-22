@@ -28,10 +28,11 @@ function saveLocalDevices(devices: Device[]): void {
 export const deviceService = {
   async getAll(): Promise<Device[]> {
     const hasBackend = !!import.meta.env.VITE_API_URL;
-    if (hasBackend) {
+    const token = localStorage.getItem('smarthome_token');
+    if (hasBackend && token) {
       try {
         const res = await api.get<Device[]>('/devices');
-        if (res.data) return res.data;
+        if (res.data && Array.isArray(res.data) && res.data.length > 0) return res.data;
       } catch (err) {
         console.warn('Backend /devices failed, using local mock state:', err);
       }
@@ -49,13 +50,20 @@ export const deviceService = {
     await new Promise((resolve) => setTimeout(resolve, 350));
 
     const hasBackend = !!import.meta.env.VITE_API_URL;
-    if (hasBackend) {
-      try {
-        const res = await api.patch<Device>(`/devices/${deviceId}/toggle`, { status: targetStatus });
-        if (res.data) return res.data;
-      } catch (err) {
-        console.warn('Backend toggle failed, applying to local mock state:', err);
+    const token = localStorage.getItem('smarthome_token');
+    if (hasBackend && token) {
+      const res = await api.patch<Device>(`/devices/${deviceId}/toggle`, { status: targetStatus });
+      if (res.data) {
+        // Synchronize local cache with persisted MongoDB device
+        const devices = loadLocalDevices();
+        const idx = devices.findIndex((d) => d._id === deviceId);
+        if (idx !== -1) {
+          devices[idx] = res.data;
+          saveLocalDevices(devices);
+        }
+        return res.data;
       }
+      throw new Error(res.message || 'Failed to toggle device on backend server');
     }
 
     const devices = loadLocalDevices();

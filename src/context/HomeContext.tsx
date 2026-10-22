@@ -18,6 +18,7 @@ import { alertService } from '../services/alertService';
 import { scheduleService } from '../services/scheduleService';
 import { energyService } from '../services/energyService';
 import { socketService } from '../services/socketService';
+import { useAuth } from './AuthContext';
 
 interface HomeContextType {
   home: Home;
@@ -56,6 +57,7 @@ interface HomeContextType {
 const HomeContext = createContext<HomeContextType | undefined>(undefined);
 
 export const HomeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated } = useAuth();
   const [home] = useState<Home>(defaultHome);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
@@ -102,8 +104,12 @@ export const HomeProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   useEffect(() => {
-    loadAll();
-  }, [loadAll]);
+    if (isAuthenticated) {
+      loadAll();
+    } else {
+      setLoading(false);
+    }
+  }, [isAuthenticated, loadAll]);
 
   // Subscribe to real-time events via Socket.IO abstraction
   useEffect(() => {

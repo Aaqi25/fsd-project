@@ -12,7 +12,12 @@ interface ZoneControl {
 }
 
 export const Dashboard: React.FC = () => {
-  const { home } = useHome();
+  const { home, devices, alerts, activityLogs } = useHome();
+
+  const totalDeviceCount = devices.length > 0 ? devices.length : 16;
+  const onlineCount = devices.length > 0 ? devices.filter((d) => d.isOnline).length : 14;
+  const standbyCount = devices.length > 0 ? devices.filter((d) => d.status !== 'active').length : 2;
+  const openAlertsCount = alerts.filter((a) => !a.isAcknowledged).length;
 
   // Zone Quick Controls state matching Figure 5.2 exactly
   const [zones, setZones] = useState<ZoneControl[]>([
@@ -92,10 +97,10 @@ export const Dashboard: React.FC = () => {
             Online Devices
           </div>
           <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2">
-            14 / 16
+            {onlineCount} / {totalDeviceCount}
           </div>
           <div className="text-xs font-semibold text-blue-600 mt-1">
-            2 Standby
+            {standbyCount} Standby
           </div>
         </div>
 
@@ -118,10 +123,10 @@ export const Dashboard: React.FC = () => {
             Open Alerts
           </div>
           <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2">
-            1 Warning
+            {openAlertsCount > 0 ? `${openAlertsCount} Warning${openAlertsCount > 1 ? 's' : ''}` : '0 Warnings'}
           </div>
           <div className="text-xs font-semibold text-amber-500 mt-1">
-            Load spike resolved
+            {openAlertsCount > 0 ? 'Action required' : 'All clear'}
           </div>
         </div>
       </div>
@@ -172,14 +177,14 @@ export const Dashboard: React.FC = () => {
           </h3>
 
           <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
-            {mockActivityLogs.map((log) => (
+            {(activityLogs && activityLogs.length > 0 ? activityLogs : mockActivityLogs).slice(0, 5).map((log) => (
               <div key={log._id} className="flex items-center gap-3">
                 <span
                   className="w-3.5 h-3.5 rounded-full shrink-0 shadow-xs"
                   style={{ backgroundColor: log.dotColor || '#3b82f6' }}
                 />
                 <span className="text-xs font-medium text-slate-700 leading-relaxed">
-                  [{log.timestamp}] {log.action}
+                  [{log.timestamp ? log.timestamp.split('T')[1]?.slice(0, 8) || log.timestamp : 'Just now'}] {log.action}
                 </span>
               </div>
             ))}

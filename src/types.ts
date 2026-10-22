@@ -152,4 +152,5 @@ export interface ActivityLog {
   action: string;
   triggeredBy: 'User' | 'Schedule' | 'Automation' | 'Sensor' | 'Simulator';
   timestamp: string;
+  dotColor?: string;
 }
