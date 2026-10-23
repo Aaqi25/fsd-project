@@ -115,12 +115,9 @@ export const Devices: React.FC = () => {
           if (device.roomId === 'room_kitchen') roomName = 'Kitchen';
           if (device.roomId === 'room_office') roomName = 'Study & Office';
 
-          let liveLoadText = `Live Load: ${device.powerWatts} W`;
-          if (device._id === 'dev_003') {
-            liveLoadText = 'Live Load: 45 W (Coffee Maker Standby)';
-          } else if (!isActived) {
-            liveLoadText = 'Live Load: 0 W (Standby)';
-          }
+          let liveLoadText = isActived
+            ? `Live Load: ${device.powerWatts} W (Active)`
+            : 'Live Load: 0 W (Standby)';
 
           return (
             <div
@@ -134,13 +131,13 @@ export const Devices: React.FC = () => {
                     {device.name}
                   </h3>
                   <span
-                    className={`px-3 py-0.5 rounded-full text-xs font-medium border ${
-                      device._id === 'dev_003' || !isActived
-                        ? 'bg-amber-50 text-amber-700 border-amber-200'
-                        : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    className={`px-3 py-0.5 rounded-full text-xs font-semibold border transition-all ${
+                      isActived
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : 'bg-amber-50 text-amber-700 border-amber-200'
                     }`}
                   >
-                    {device._id === 'dev_003' || !isActived ? 'Standby' : 'Active'}
+                    {isActived ? 'Active' : 'Standby'}
                   </span>
                 </div>
 
@@ -150,7 +147,7 @@ export const Devices: React.FC = () => {
                 </div>
 
                 {/* Live Load */}
-                <div className="text-sm font-bold text-sky-700 mt-5">
+                <div className={`text-sm font-bold mt-5 ${isActived ? 'text-sky-700' : 'text-slate-400'}`}>
                   {liveLoadText}
                 </div>
 
@@ -191,13 +188,15 @@ export const Devices: React.FC = () => {
                 onClick={() => handleToggleDevice(device._id)}
                 className={`w-full mt-6 py-2.5 px-4 rounded-lg text-xs font-bold text-white transition-colors cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed ${
                   isActived
-                    ? 'bg-[#0f172a] hover:bg-slate-800'
-                    : 'bg-slate-700 hover:bg-slate-800'
+                    ? 'bg-slate-800 hover:bg-slate-900 border border-slate-700'
+                    : 'bg-[#0284c7] hover:bg-[#0369a1]'
                 }`}
               >
                 {togglePending[device._id]
-                  ? 'Updating...'
-                  : `Toggle State (${isActived ? 'ON' : 'OFF'})`}
+                  ? 'Updating State...'
+                  : isActived
+                  ? 'Turn OFF (Switch to Standby)'
+                  : 'Turn ON (Activate Appliance)'}
               </button>
             </div>
           );

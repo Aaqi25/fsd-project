@@ -14,11 +14,6 @@ interface ZoneControl {
 export const Dashboard: React.FC = () => {
   const { home, devices, alerts, activityLogs } = useHome();
 
-  const totalDeviceCount = devices.length > 0 ? devices.length : 16;
-  const onlineCount = devices.length > 0 ? devices.filter((d) => d.isOnline).length : 14;
-  const standbyCount = devices.length > 0 ? devices.filter((d) => d.status !== 'active').length : 2;
-  const openAlertsCount = alerts.filter((a) => !a.isAcknowledged).length;
-
   // Zone Quick Controls state matching Figure 5.2 exactly
   const [zones, setZones] = useState<ZoneControl[]>([
     {
@@ -55,7 +50,23 @@ export const Dashboard: React.FC = () => {
     },
   ]);
 
+  const [recentZoneLogs, setRecentZoneLogs] = useState<any[]>([]);
+
   const handleToggleZone = (id: string) => {
+    const target = zones.find((z) => z.id === id);
+    if (target) {
+      const nextStatus = !target.isOn;
+      const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      setRecentZoneLogs((prev) => [
+        {
+          _id: 'act_' + Date.now(),
+          timestamp: nowStr,
+          action: `${target.name} zone turned ${nextStatus ? 'ON' : 'OFF'} via Quick Controls`,
+          dotColor: nextStatus ? '#10b981' : '#f59e0b',
+        },
+        ...prev,
+      ]);
+    }
     setZones((prev) =>
       prev.map((z) => (z.id === id ? { ...z, isOn: !z.isOn } : z))
     );
@@ -63,6 +74,20 @@ export const Dashboard: React.FC = () => {
 
   // Base draw is 590W, sum of z1(450) + z2(620) + z3(180) + 590 = exactly 1,840 W!
   const totalWatts = zones.reduce((sum, z) => sum + (z.isOn ? z.watts : 0), 590);
+  const percentVsAvg = Math.round(((totalWatts - 1640) / 1640) * 100);
+
+  // Dynamic Standby Calculation linked to zones & devices
+  const zoneStandbyDelta =
+    (zones.find((z) => z.id === 'z1')?.isOn ? 0 : 3) +
+    (zones.find((z) => z.id === 'z2')?.isOn ? 0 : 3) +
+    (zones.find((z) => z.id === 'z3')?.isOn ? 0 : 2) +
+    (zones.find((z) => z.id === 'z4')?.isOn ? -2 : 0);
+
+  const baseStandby = devices.length > 0 ? devices.filter((d) => d.status !== 'active').length : 2;
+  const standbyCount = Math.max(0, baseStandby + zoneStandbyDelta);
+  const totalDeviceCount = devices.length > 0 ? devices.length : 16;
+  const onlineCount = devices.length > 0 ? devices.filter((d) => d.isOnline).length : 14;
+  const openAlertsCount = alerts.filter((a) => !a.isAcknowledged).length;
 
   return (
     <div className="space-y-6">
@@ -86,8 +111,8 @@ export const Dashboard: React.FC = () => {
           <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2">
             {totalWatts.toLocaleString()} W
           </div>
-          <div className="text-xs font-semibold text-rose-500 mt-1">
-            +12% vs avg
+          <div className={`text-xs font-semibold mt-1 ${percentVsAvg >= 0 ? 'text-rose-500' : 'text-emerald-600'}`}>
+            {percentVsAvg >= 0 ? `+${percentVsAvg}% vs avg` : `${percentVsAvg}% vs avg`}
           </div>
         </div>
 
@@ -150,7 +175,10 @@ export const Dashboard: React.FC = () => {
                     {zone.name}
                   </div>
                   <div className="text-xs text-slate-500 mt-0.5">
-                    {zone.temp} | {zone.watts} W • {zone.info}
+                    {zone.temp} | {zone.isOn ? `${zone.watts} W` : '0 W (Standby)'} •{' '}
+                    <span className={zone.isOn ? 'text-slate-600' : 'text-amber-600 font-semibold'}>
+                      {zone.isOn ? zone.info : 'Zone in Standby'}
+                    </span>
                   </div>
                 </div>
 
@@ -177,7 +205,10 @@ export const Dashboard: React.FC = () => {
           </h3>
 
           <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
-            {(activityLogs && activityLogs.length > 0 ? activityLogs : mockActivityLogs).slice(0, 5).map((log) => (
+            {([
+              ...recentZoneLogs,
+              ...(activityLogs && activityLogs.length > 0 ? activityLogs : mockActivityLogs),
+            ]).slice(0, 5).map((log) => (
               <div key={log._id} className="flex items-center gap-3">
                 <span
                   className="w-3.5 h-3.5 rounded-full shrink-0 shadow-xs"
